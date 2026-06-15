@@ -1,0 +1,46 @@
+pipeline:
+  name: idp-deploy
+  identifier: idp_deploy
+
+  stages:
+
+    - stage:
+        name: Deploy
+        type: Deployment
+
+        spec:
+          serviceConfig:
+            serviceRef: product-login
+
+          execution:
+            steps:
+
+              - step:
+                  name: Git Checkout
+                  type: GitClone
+
+              - step:
+                  name: Fetch Secrets (Vault via Harness)
+                  type: ShellScript
+                  spec:
+                    shell: Bash
+                    script: |
+                      echo "Fetching secrets..."
+
+                      USERNAME=<+secrets.getValue("product-login/username")>
+                      PASSWORD=<+secrets.getValue("product-login/password")>
+
+                      echo "Secrets loaded"
+
+              - step:
+                  name: Deploy App
+                  type: ShellScript
+                  spec:
+                    shell: Bash
+                    script: |
+                      echo "Deploying application..."
+
+                      echo "USER=$USERNAME"
+                      echo "PASS=$PASSWORD"
+
+                      echo "App deployed successfully"
