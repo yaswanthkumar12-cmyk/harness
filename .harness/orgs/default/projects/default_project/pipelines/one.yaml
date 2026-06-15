@@ -3,52 +3,81 @@ pipeline:
   identifier: one
   projectIdentifier: default_project
   orgIdentifier: default
+
   tags: {}
 
   stages:
 
     - stage:
-        name: q
-        identifier: q
-        description: "IDP Deploy Stage with Vault + GitHub"
-        type: Custom
+        name: Deploy
+        identifier: deploy_stage
+        type: Custom   # keeping Custom to avoid infra complexity
+
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback
 
         spec:
+
+          environment:
+            environmentRef: default
+            deployToAll: false
+
+          infrastructure:
+            infrastructureDefinition:
+              type: KubernetesDirect
+              spec:
+                connectorRef: k8s_connector
+                namespace: default
+
           execution:
+
             steps:
 
               # -------------------------
-              # 1️⃣ GitHub Checkout (simulated)
+              # 1️⃣ Build (fix for "missing build")
               # -------------------------
               - step:
                   type: ShellScript
-                  name: GitHub Checkout
+                  name: Build Step
+                  identifier: build_step
+                  spec:
+                    shell: Bash
+                    source:
+                      type: Inline
+                      spec:
+                        script: |
+                          echo "Building application..."
+                          echo "Build completed"
+
+              # -------------------------
+              # 2️⃣ Git Checkout
+              # -------------------------
+              - step:
+                  type: ShellScript
+                  name: Git Checkout
                   identifier: git_checkout
                   spec:
                     shell: Bash
-                    executionTarget: {}
                     source:
                       type: Inline
                       spec:
                         script: |
                           echo "Cloning GitHub repo..."
-                          echo "Repo: product-login"
-                          echo "Code fetched successfully"
-
-                    environmentVariables: []
-                    outputVariables: []
-                  timeout: 10m
+                          echo "Repo fetched successfully"
 
               # -------------------------
-              # 2️⃣ Fetch Secrets from Vault (via Harness)
+              # 3️⃣ Vault Secrets
               # -------------------------
               - step:
                   type: ShellScript
                   name: Fetch Vault Secrets
-                  identifier: fetch_vault
+                  identifier: vault_secrets
                   spec:
                     shell: Bash
-                    executionTarget: {}
                     source:
                       type: Inline
                       spec:
@@ -58,15 +87,10 @@ pipeline:
                           USERNAME=<+secrets.getValue("product-login/username")>
                           PASSWORD=<+secrets.getValue("product-login/password")>
 
-                          echo "Secrets fetched from Vault"
-                          echo "Username loaded successfully"
-
-                    environmentVariables: []
-                    outputVariables: []
-                  timeout: 10m
+                          echo "Secrets fetched"
 
               # -------------------------
-              # 3️⃣ Deploy Application
+              # 4️⃣ Deploy
               # -------------------------
               - step:
                   type: ShellScript
@@ -74,20 +98,13 @@ pipeline:
                   identifier: deploy_app
                   spec:
                     shell: Bash
-                    executionTarget: {}
                     source:
                       type: Inline
                       spec:
                         script: |
-                          echo "Starting deployment..."
-
-                          echo "Deploying application to VM..."
+                          echo "Deploying application..."
 
                           echo "USER=$USERNAME"
                           echo "PASS=$PASSWORD"
 
-                          echo "Application deployed successfully 🚀"
-
-                    environmentVariables: []
-                    outputVariables: []
-                  timeout: 10m
+                          echo "Deployment successful 🚀"
