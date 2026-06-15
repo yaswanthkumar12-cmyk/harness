@@ -1,39 +1,29 @@
 pipeline:
-  name: idp-deploy
-  identifier: idp_deploy
+  name: one
+  identifier: one
   projectIdentifier: default_project
   orgIdentifier: default
+  tags: {}
 
   stages:
 
     - stage:
-        name: Deploy
-        identifier: deploy_stage
-        type: Deployment
-        spec:
-          serviceConfig:
-            serviceRef: product-login
+        name: q
+        identifier: q
+        description: "IDP Deploy Stage with Vault + GitHub"
+        type: Custom
 
+        spec:
           execution:
             steps:
 
               # -------------------------
-              # 1️⃣ Git Checkout
+              # 1️⃣ GitHub Checkout (simulated)
               # -------------------------
               - step:
-                  name: Git Checkout
-                  identifier: git_checkout
-                  type: GitClone
-                  spec:
-                    connectorRef: github_connector
-
-              # -------------------------
-              # 2️⃣ Fetch Secrets (Vault via Harness)
-              # -------------------------
-              - step:
-                  name: Fetch Secrets
-                  identifier: fetch_secrets
                   type: ShellScript
+                  name: GitHub Checkout
+                  identifier: git_checkout
                   spec:
                     shell: Bash
                     executionTarget: {}
@@ -41,21 +31,47 @@ pipeline:
                       type: Inline
                       spec:
                         script: |
-                          echo "Fetching secrets from Vault via Harness..."
+                          echo "Cloning GitHub repo..."
+                          echo "Repo: product-login"
+                          echo "Code fetched successfully"
+
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
+
+              # -------------------------
+              # 2️⃣ Fetch Secrets from Vault (via Harness)
+              # -------------------------
+              - step:
+                  type: ShellScript
+                  name: Fetch Vault Secrets
+                  identifier: fetch_vault
+                  spec:
+                    shell: Bash
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: |
+                          echo "Connecting to Vault..."
 
                           USERNAME=<+secrets.getValue("product-login/username")>
                           PASSWORD=<+secrets.getValue("product-login/password")>
 
-                          echo "Secrets fetched successfully"
-                          echo "Username loaded"
+                          echo "Secrets fetched from Vault"
+                          echo "Username loaded successfully"
+
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
 
               # -------------------------
               # 3️⃣ Deploy Application
               # -------------------------
               - step:
+                  type: ShellScript
                   name: Deploy App
                   identifier: deploy_app
-                  type: ShellScript
                   spec:
                     shell: Bash
                     executionTarget: {}
@@ -63,9 +79,15 @@ pipeline:
                       type: Inline
                       spec:
                         script: |
+                          echo "Starting deployment..."
+
                           echo "Deploying application to VM..."
 
                           echo "USER=$USERNAME"
                           echo "PASS=$PASSWORD"
 
                           echo "Application deployed successfully 🚀"
+
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
