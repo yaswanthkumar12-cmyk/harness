@@ -1,13 +1,15 @@
 pipeline:
   name: idp-deploy
   identifier: idp_deploy
+  projectIdentifier: default_project
+  orgIdentifier: default
 
   stages:
 
     - stage:
         name: Deploy
+        identifier: deploy_stage
         type: Deployment
-
         spec:
           serviceConfig:
             serviceRef: product-login
@@ -15,32 +17,55 @@ pipeline:
           execution:
             steps:
 
+              # -------------------------
+              # 1️⃣ Git Checkout
+              # -------------------------
               - step:
                   name: Git Checkout
+                  identifier: git_checkout
                   type: GitClone
+                  spec:
+                    connectorRef: github_connector
 
+              # -------------------------
+              # 2️⃣ Fetch Secrets (Vault via Harness)
+              # -------------------------
               - step:
-                  name: Fetch Secrets (Vault via Harness)
+                  name: Fetch Secrets
+                  identifier: fetch_secrets
                   type: ShellScript
                   spec:
                     shell: Bash
-                    script: |
-                      echo "Fetching secrets..."
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: |
+                          echo "Fetching secrets from Vault via Harness..."
 
-                      USERNAME=<+secrets.getValue("product-login/username")>
-                      PASSWORD=<+secrets.getValue("product-login/password")>
+                          USERNAME=<+secrets.getValue("product-login/username")>
+                          PASSWORD=<+secrets.getValue("product-login/password")>
 
-                      echo "Secrets loaded"
+                          echo "Secrets fetched successfully"
+                          echo "Username loaded"
 
+              # -------------------------
+              # 3️⃣ Deploy Application
+              # -------------------------
               - step:
                   name: Deploy App
+                  identifier: deploy_app
                   type: ShellScript
                   spec:
                     shell: Bash
-                    script: |
-                      echo "Deploying application..."
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: |
+                          echo "Deploying application to VM..."
 
-                      echo "USER=$USERNAME"
-                      echo "PASS=$PASSWORD"
+                          echo "USER=$USERNAME"
+                          echo "PASS=$PASSWORD"
 
-                      echo "App deployed successfully"
+                          echo "Application deployed successfully 🚀"
